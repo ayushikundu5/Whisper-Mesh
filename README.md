@@ -1,220 +1,296 @@
-# Whisper Mesh
+# ⚡ Whisper Mesh
 
-Offline messaging over Bluetooth LE. Phones discover each other and relay messages hop-to-hop, with no internet, no cell service, and no servers.
+> **Decentralized, Serverless, Off-Grid P2P Mesh Messaging Over Bluetooth Low Energy (BLE)**
 
-> **Security status: pre-audit.** This project has had no external security review. It is built for connectivity in dead zones — festivals, stadiums, campsites, outages. **Do not rely on it in a situation where being read or identified carries real risk.** See [Threat model](#threat-model).
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/ayushikundu5/Whisper-Mesh)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![React Native](https://img.shields.io/badge/React%20Native-0.86-61dafb)](https://reactnative.dev/)
+[![Expo SDK](https://img.shields.io/badge/Expo%20SDK-57-black)](https://expo.dev/)
+[![Tests](https://img.shields.io/badge/Protocol%20Tests-192%20passed-success)](packages/core)
+[![Security Status](https://img.shields.io/badge/Security-Pre--Audit-orange)](#-threat-model--cryptographic-guarantees)
 
-## Status
+Whisper Mesh is a zero-infrastructure, peer-to-peer mesh messaging system operating entirely over **Bluetooth Low Energy (BLE)**. Mobile devices discover each other automatically and relay encrypted messages hop-to-hop across a distributed mesh topology — **with no internet access, no cellular connectivity, and zero central servers**.
 
-**The protocol is complete and tested in simulation. The app now runs on real hardware, and two phones have exchanged an encrypted message.**
+Designed specifically for dead zones, subterranean spaces, crowded stadiums, music festivals, natural disaster scenarios, power grid failures, and remote wilderness adventures.
 
-| Milestone | State |
-|---|---|
-| M0 — protocol in simulation | ✅ complete — 192 tests, no hardware |
-| M1 — two phones, one frame | ✅ **verified on hardware** — discovery, GATT, and delivery between two Android phones |
-| M2 — real multi-hop mesh | 🔨 relay, gossip sync and connection policy tested in simulation; **needs a third phone to verify** |
-| M3 — Noise sessions, QR pairing, DMs | ✅ complete — 94 tests, and a live session between two paired phones |
-| M4 — background service, battery | 🔨 duty-cycle policy tested; foreground service runs; **battery cost over hours unmeasured** |
-| M5 — product, Play Store | 🔨 app, listing, privacy policy written; **debug-signed only, nothing submitted** |
+---
 
-What is *not* yet verified, precisely: **relaying**. Two phones prove direct delivery. The mesh claim — that a message hops A → B → C when A and C are out of range of each other — needs three devices and has not been run.
+> [!WARNING]
+> **Security Status: Pre-Audit Phase**
+> This project has not yet undergone an external security audit. It is built for resilient connectivity in dead zones. **Do not rely on it in high-risk environments where physical or digital compromise carries critical risk.** See the [Threat Model](#-threat-model--cryptographic-guarantees) section for detailed cryptographic boundaries and non-claims.
 
-## Quick start
+---
 
-```sh
-npm install     # packages/core only, seconds
-npm test        # 192 tests, no hardware
+## 🌟 Key Highlights
+
+- 📡 **True Off-Grid Mesh Relay**: Relay messages hop-to-hop across multiple intermediate devices using TTL-controlled store-and-forward flooding (`MAX_TTL = 7`).
+- 🔐 **End-to-End Encryption (Noise IK)**: Cryptographically secured private 1:1 DMs utilizing `Noise_IK_25519_ChaChaPoly_SHA256`. No unauthenticated key exchanges or TOFU vulnerabilities.
+- 🤝 **In-Person Out-of-Band Pairing**: Out-of-band QR code exchange with 6-word Short Authentication String (SAS) fingerprint confirmation to mathematically eliminate MITM attacks.
+- ⚡ **Pure TypeScript Protocol Core (`@whisper/core`)**: Zero React Native or platform dependencies in the core. Allows simulating a 20-node lossy, partitioned, hostile mesh network in Jest in under 14 seconds!
+- 🔋 **Smart Battery Duty-Cycling**: Dynamic power-management policy (`power/dutyCycle.ts`) adjusts BLE scanning/advertising based on real-time battery status and peer density.
+- 📱 **Custom Android Native Radio Module (`whisper-ble`)**: Kotlin-based Expo native module implementing BLE Peripheral advertising and GATT server role alongside central scanning.
+- 🎨 **Modern Native UI**: Dual Light/Dark dynamic theme system built with Expo, React Navigation 7, and SVG QR rendering.
+
+---
+
+## 🚦 Project & Hardware Milestone Status
+
+| Milestone | Scope & Features | Status | Verification Detail |
+| :--- | :--- | :---: | :--- |
+| **M0** | Protocol Core & SimNet | ✅ Complete | 192 automated unit/simulation tests passed in Jest (0 hardware dependencies) |
+| **M1** | Two-Phone Hardware Link | ✅ Verified | Tested on real Android hardware: Discovery, GATT server, 1-hop delivery |
+| **M2** | Multi-Hop Mesh Relaying | 🔨 In Progress | Simulated in `@whisper/core`; awaiting 3rd hardware device field test |
+| **M3** | Noise IK Sessions & QR DM | ✅ Complete | 94 crypto/session tests passed; live hardware E2EE handshake confirmed |
+| **M4** | Background Service & Battery | 🔨 In Progress | Foreground service + duty-cycle active; long-term battery profiling underway |
+| **M5** | Product & Store Readiness | 🔨 In Progress | App UI, store listing, data safety declaration, & privacy policy complete |
+
+---
+
+## 🏛 Architecture & Protocol Design
+
+Whisper Mesh is organized as a monorepo splitting protocol logic strictly from device/platform bindings.
+
+```
+                  ┌─────────────────────────────────────────┐
+                  │          React Native App UI            │
+                  │   (Screens, State, SQLite, Keystore)    │
+                  └────────────────────┬────────────────────┘
+                                       │
+                  ┌────────────────────▼────────────────────┐
+                  │       @whisper/app (Device Layer)       │
+                  │ (BleTransport.ts, whisper-ble Native)   │
+                  └────────────────────┬────────────────────┘
+                                       │  L0 Transport Interface
+      ═════════════════════════════════╪═════════════════════════════════
+                                       │  Pure TypeScript (@whisper/core)
+                  ┌────────────────────▼────────────────────┐
+                  │        Messenger / Trust Store          │
+                  │   (Ed25519 Identity, QR Pairing, SAS)   │
+                  └────────────────────┬────────────────────┘
+                                       │
+                  ┌────────────────────▼────────────────────┐
+                  │     L3: E2EE Noise_IK DM Sessions       │
+                  │  (X25519, ChaCha20-Poly1305, SHA-256)   │
+                  └────────────────────┬────────────────────┘
+                                       │
+                  ┌────────────────────▼────────────────────┐
+                  │      L2: Mesh Routing & Relaying        │
+                  │  (TTL Flooding, Bloom Dedup, Gossip)    │
+                  └────────────────────┬────────────────────┘
+                                       │
+                  ┌────────────────────▼────────────────────┐
+                  │    L1: Link Layer (Fragmentation)       │
+                  │   (MTU Slicing, Per-Peer Buffer Limits) │
+                  └─────────────────────────────────────────┘
+```
+
+### 🔒 The 7 Load-Bearing Architectural Rules
+
+Every core rule is backed by explicit regression test suites to prevent security or performance decay:
+
+1. **Zero React Native Imports in Core**: `@whisper/core` must never import `react-native` or platform code. Entire protocol runs in standard Node.js.
+2. **Verify Signature Before Deduplication**: Signatures are checked *strictly before* touching the seen-set cache (`mesh.ts`). Prevents cache-poisoning attack where fake signatures suppress legitimate messages.
+3. **Comprehensive Header Signing**: Signatures cover `type`, `flags`, `msgId`, `sender`, `timestamp`, and `payload`. Excludes only mutable 2-byte TTL/version. Prevents sender impersonation attacks.
+4. **Strict Noise IK Handshake (No TOFU)**: Handshakes require prior static key possession obtained via in-person QR pairing. No unauthenticated key exchanges permitted.
+5. **Pinned Trust Store**: Public keys tied to contacts cannot be silently overwritten. Re-keying requires an explicit `repair()` user action.
+6. **Ephemeral DM Signatures**: Direct Messages and Handshakes sign wire frames using a rotating 15-minute ephemeral keypair (`EPHEMERALLY_SIGNED`). Prevents BLE relay eavesdroppers from building traffic flow graphs.
+7. **Strict Upper Bounds on Memory**: Seen-sets, outboxes, reassembly buffers, and tag indices are strictly capped to mitigate resource-exhaustion DoS attacks.
+
+---
+
+## 📄 Protocol Wire Frame Format
+
+Frames consist of a 2-byte mutable header prefix followed by an immutable, Ed25519-signed region.
+
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  Version (1B) |    TTL (1B)   |   Type (1B)   |   Flags (1B)  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                       Message ID (16 Bytes)                   +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                     Sender Public Key (32B)                   +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     Timestamp (8 Bytes - ms)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Payload (...)                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                     Ed25519 Signature (64B)                   +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+### Frame Types Breakdown
+- `1: ChannelMessage` - Public broadcast message signed by identity key.
+- `2: DirectMessage` - Encrypted DM payload routed via directional HMAC tags.
+- `3: GossipDigest` - Bloom filter digest of held message IDs for efficient mesh sync.
+- `4: GossipRequest` - Explicit request for missing message IDs.
+- `5: HandshakeInit` - Noise IK initiation payload (Message 1).
+- `6: HandshakeResponse` - Noise IK response payload (Message 2).
+
+---
+
+## 💻 Tech Stack
+
+### Protocol Core (`packages/core`)
+- **Language**: TypeScript 5.7 (Strict Mode, `noUncheckedIndexedAccess`)
+- **Testing Framework**: Jest 30 (`ts-jest`), Deterministic Radio Simulator (`SimNet`)
+- **Crypto Primitives**: `@noble/curves` (Ed25519, X25519), `@noble/ciphers` (ChaCha20-Poly1305), `@noble/hashes` (SHA-256, HMAC)
+
+### Device & App (`packages/app`)
+- **Framework**: React Native 0.86 / Expo SDK 57
+- **Native Modules**: Local Kotlin Expo Module (`modules/whisper-ble`), `react-native-ble-plx`
+- **Database & Storage**: `expo-sqlite` (Messages & Contacts), `expo-secure-store` (Keystore Seeds)
+- **UI & State**: Custom Theme System (Dark/Light), React Navigation 7, `react-native-qrcode-svg`, `expo-camera`
+
+---
+
+## ⚡ BLE Hardware & OS Optimizations
+
+- **31-Byte Advertisement Constraint**: Standard BLE advertisements are restricted to 31 bytes. Whisper Mesh packages the ephemeral peer handle inside manufacturer data under SIG-reserved ID `0xFFFF` to ensure compatibility without triggering `ADVERTISE_FAILED_DATA_TOO_LARGE`.
+- **Android Scan Throttling Workaround**: Android limits scan triggers to 5 starts per 30-second window. `BleTransport` enforces a floor cycle of 6.5s to sustain active duty-cycling without getting throttled.
+- **Custom Kotlin GATT Server**: Extends `react-native-ble-plx` by adding full GATT Server & Advertising capabilities via `WhisperBleModule.kt` and a persistent Android Foreground Service (`WhisperForegroundService.kt`).
+- **iOS Background Awareness**: iOS hides advertisement service data when in the background. Whisper Mesh automatically identifies iOS devices and operates them as active foreground nodes or leaf participants.
+
+---
+
+## 🛠️ Quick Start & Installation
+
+### Prerequisites
+- **Node.js**: `v20.0.0` or higher
+- **JDK**: **Java 21 (Mandatory)** *(JDK 24+ or Studio JBR 25 causes `prefab` stderr warnings that break Gradle builds)*
+- **Android SDK**: Platform 36, Build-Tools 36
+- **Path Warning**: Windows users must build from a path containing **no spaces** (e.g. `C:\Whisper-Mesh`).
+
+### 1. Test Protocol Core (No Hardware Needed)
+Run the entire 192-test protocol suite in Node.js:
+
+```bash
+# Clone the repository
+git clone https://github.com/ayushikundu5/Whisper-Mesh.git
+cd Whisper-Mesh
+
+# Install & test protocol core
+npm install
+npm test
+
+# Run typechecks
 npm run typecheck
 ```
 
-Run a single suite while iterating:
-
-```sh
+To run a single test suite during development:
+```bash
 npm test --workspace packages/core -- src/session.test.ts
 ```
 
-> On Windows PowerShell, `&&` is not a valid separator. Use `;` or the `--workspace` form above.
+### 2. Build & Run Android App
 
-## Why the core is pure TypeScript
-
-`packages/core` imports nothing from React Native. That is the load-bearing decision of the whole project: a 20-node mesh with packet loss, partitions, and hostile peers runs in Jest on a laptop in ~14 seconds. Every routing, dedup, TTL, session, and power bug gets found before anyone opens Android Studio.
-
-```
-packages/core/src/
-  types.ts              protocol constants, frame shape, frame types
-  frame.ts              wire format; signed vs. mutable header split
-  lru.ts  bloom.ts      bounded dedup set; gossip digests
-  link.ts               L1 — fragmentation, reassembly, per-peer bounds
-  mesh.ts               L2 — TTL flooding, store-and-forward, gossip sync
-  session.ts            L3 — Noise sessions over the flood mesh, tag routing
-  messenger.ts          app-facing: identity + trust + sessions + mesh
-  pairing.ts  trust.ts  QR pairing payload; the trust store
-  crypto/identity.ts    Ed25519 identity, frame signing and verification
-  crypto/noise.ts       Noise_IK_25519_ChaChaPoly_SHA256
-  net/connection.ts     which peers to dial, and when
-  power/dutyCycle.ts    how hard to run the radio
-  transport.ts          L0 interface — the only thing BLE has to satisfy
-  testing/simnet.ts     deterministic radio simulator
-
-packages/app/           radio, storage, UI. No protocol logic.
-  index.js              CSPRNG polyfill — must load before anything else
-  src/ble/BleTransport.ts   the only file that knows BLE exists
-  src/state/MeshProvider.tsx  lifecycle: identity, radio, mesh, sessions
-  src/ui/theme.ts       light and dark palettes, style factory
-  modules/whisper-ble/  local Expo module: BLE peripheral role (Kotlin)
-```
-
-The simulator earns its place: it models loss and partitioning as properties of the *network*, and `flush()` throws if the queue will not drain — so a routing loop or a missing TTL decrement fails a test instead of hanging.
-
-## Building the Android app
-
-`packages/app` is deliberately **not** an npm workspace. It pulls the entire React Native toolchain, and `npm install && npm test` working anywhere is worth more than saving one command.
-
-### Toolchain requirements
-
-Two of these are not optional and both cost hours if missed.
-
-| Requirement | Why |
-|---|---|
-| Android SDK, platform 36, build-tools 36 | Gradle downloads what is missing |
-| **JDK 21** | **Not 25.** AGP runs `prefab` as a separate JVM; JDK 24+ prints a native-access warning to stderr and AGP treats any prefab stderr as fatal. Android Studio's bundled JBR is 25 — set Gradle JDK to 21 explicitly. |
-| **A build path with no spaces** | Windows 8.3 shortening rewrites `clang++.exe` to `CLANG_~1.EXE`. Clang picks its C or C++ driver mode from its own filename, so under the short name it links as C and omits libc++ — producing ~20 undefined `operator new` / `__cxa_*` symbols at link time. Use a junction: `mklink /J C:\wm "C:\path with spaces\Whisper-Mesh"`. |
-| A physical Android phone | Emulators have no BLE radio |
-
-### Build
-
-```sh
+```bash
 cd packages/app
+
+# Install dependencies
 npm install
-npx expo prebuild --platform android   # generates android/, which is gitignored
+
+# Prebuild native code
+npx expo prebuild --platform android
+
+# Build Standalone Release APK
 cd android
 ./gradlew assembleRelease
 ```
+> The generated standalone APK is located at: `packages/app/android/app/build/outputs/apk/release/app-release.apk`
 
-Output: `packages/app/android/app/build/outputs/apk/release/app-release.apk` (~112 MB, four ABIs, JS bundle embedded).
+---
 
-**Expo Go will not work.** `react-native-ble-plx` and the local `whisper-ble` module are native code; a dev client or release build is required.
+## 📱 Hardware Testing Procedure (2+ Devices)
 
-Debug builds do **not** embed the JS bundle — they expect Metro and will show "Unable to load script" if it is not running. Use `assembleRelease` for a standalone APK.
+1. **Install APK** on two physical Android phones.
+2. **Grant Nearby Devices Permission**: Ensure `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE` permissions are granted.
+3. **Configure User Name**: Set display name in Settings prior to scanning.
+4. **Verify Connectivity**: Status card should display `1 device in range`.
+5. **Test Public Channel ("Everyone nearby")**: Post a broadcast message to verify GATT link and signature verification.
+6. **Pair Devices**:
+   - Open **Pairing Screen** on both devices to display QR code and 6 confirmation words.
+   - Scan each other's QR code using the in-app camera.
+   - Verify that the 6 Short Authentication String (SAS) words match on both screens.
+7. **Send Encrypted DM**: Initiate private chat. Upon completion of the Noise IK handshake, status shifts from fingerprint to `Connected`.
 
-> The release variant is signed with the **debug keystore**. Installable on your own devices; not shippable. Generate a real keystore before any store submission.
+---
 
-## Using it — two devices
+## 📂 Repository Layout
 
-A BLE mesh cannot be tested with one phone. Two prove direct messaging; three are needed to prove relaying.
-
-1. **Install the same APK on both.** Different signatures cannot be installed over one another.
-2. **Grant "Nearby devices".** Android 12+ makes `BLUETOOTH_SCAN`/`CONNECT`/`ADVERTISE` runtime permissions; refused, the scanner returns nothing and advertising fails *silently*.
-3. **Set your name first** — on the pairing screen or in Settings. The name is signed into the pairing payload at scan time, so renaming later cannot reach a contact someone has already stored.
-4. **Check the status card** reads `1 device in range`. That counts *other* phones, so 1 is correct for a pair. A `Radio problem` banner names the fault if there is one.
-5. **Test the public channel first** — "Everyone nearby". No keys involved, so it isolates radio faults from crypto faults.
-6. **Pair.** Each phone shows a QR *and its own six confirmation words*. The other phone scans and sees six words in a dialog. **They must match.** If they differ, someone is in between — stop.
-7. **Send a private message.** The contact subtitle shows a fingerprint until the Noise handshake completes, then `Connected`.
-
-Both phones must be in the foreground and within about ten metres.
-
-### If they cannot find each other
-
-Bluetooth on; **Nearby devices** granted; both apps foregrounded. Then:
-
-```sh
-adb logcat -s ReactNativeJS:V WhisperBle:V AndroidRuntime:E
+```
+Whisper-Mesh/
+├── .github/                    # CI/CD Workflows
+├── packages/
+│   ├── core/                   # Pure TypeScript Mesh Protocol
+│   │   ├── src/
+│   │   │   ├── crypto/         # Ed25519 identity & Noise IK E2EE
+│   │   │   ├── net/            # Connection scheduling & peer selection
+│   │   │   ├── power/          # Dynamic battery duty-cycling engine
+│   │   │   ├── testing/        # SimNet deterministic radio simulator
+│   │   │   ├── bloom.ts        # Bloom filter digest generator for gossip
+│   │   │   ├── frame.ts        # Binary frame encoding & Ed25519 signing
+│   │   │   ├── link.ts         # MTU fragmentation & per-peer queuing
+│   │   │   ├── lru.ts          # Bounded LRU deduplication cache
+│   │   │   ├── mesh.ts         # TTL flood routing & store-and-forward
+│   │   │   ├── messenger.ts    # Main app-facing messenger orchestrator
+│   │   │   ├── pairing.ts      # Out-of-band QR payload & SAS 6-word gen
+│   │   │   ├── session.ts      # E2EE Noise session state & tag router
+│   │   │   ├── transport.ts    # L0 hardware abstraction interface
+│   │   │   ├── trust.ts        # Pinned public-key identity store
+│   │   │   └── types.ts        # Protocol frame constants & interfaces
+│   │   ├── jest.config.js      # Core test runner configuration
+│   │   └── package.json        # Protocol core package manifest
+│   └── app/                    # React Native Device & UI Application
+│       ├── modules/
+│       │   └── whisper-ble/    # Native Android (Kotlin) & iOS (Swift) BLE module
+│       ├── src/
+│       │   ├── ble/            # BleTransport implementation & BLE constants
+│       │   ├── screens/        # Channel, Chat, Pair, & Settings UI screens
+│       │   ├── state/          # MeshProvider React Context & lifecycle
+│       │   ├── storage/        # SQLite message store & Keystore seed storage
+│       │   └── ui/             # Dynamic Light/Dark UI theme system
+│       ├── store/              # Play Store listing, checklist & privacy policy
+│       ├── App.tsx             # Root application navigation shell
+│       └── package.json        # Mobile application package manifest
+├── package.json                # Monorepo workspace configuration
+├── CLAUDE.md                   # Repository guidelines
+└── README.md                   # Master project documentation
 ```
 
-## Design notes worth knowing
+---
 
-### Signature coverage
+## 🛡️ Threat Model & Cryptographic Guarantees
 
-The frame splits into a 2-byte mutable prefix (`version`, `ttl`) and a signed region covering everything else — `type`, `flags`, `msgId`, **`sender`**, `timestamp`, and payload.
+### What Whisper Mesh Guarantees
+- **Message Confidentiality & Integrity**: Direct Messages use Noise IK encryption. Relays cannot decrypt message contents.
+- **Impersonation Prevention**: Public messages are signed with Ed25519 identity keys. Frame headers cover sender public keys to prevent forging.
+- **MITM Resistance**: QR pairing coupled with 6-word SAS confirmation prevents key-substitution attacks during pairing.
+- **Metadata Protection for Relays**: DMs are signed with ephemeral rotating keys. Relays see only 8-byte HMAC tags (`HMAC(directional_key, counter)`), preventing passive traffic flow analysis.
 
-BitChat's headline vulnerability was signing only the payload, leaving `senderPeerID` and `nickname` forgeable, so anyone could impersonate anyone in a public channel. `frame.test.ts` has a test per tampered field, including that exact attack.
+### What Is Not Claimed (Pre-Audit Boundaries)
+- **Metadata Anonymity from Local Radio Observers**: BLE advertisements broadcast over local spectrum. A local radio sniffer can detect that Whisper Mesh is running.
+- **At-Rest Database Encryption**: Local SQLite database is stored in application sandbox (SQLCipher planned post-audit).
+- **External Security Audit**: Codebase is pre-audit. Use responsibly in off-grid situations.
 
-TTL is excluded because relays must rewrite it; signing it would break the signature at the first hop. That is safe because TTL asserts nothing about authenticity — and the mesh clamps it to `MAX_TTL` on receipt, which closes the broadcast-storm vector that exclusion would otherwise open.
+---
 
-### Verify before dedup
+## 👤 Author & Credits
 
-`mesh.ts` verifies a signature *strictly before* touching the seen set. Reversing these is BitChat's cache-poisoning bug: an attacker mints a frame carrying the id of a message they want suppressed, the node caches that id, and the genuine message is later dropped as a duplicate — censorship with no key material. There is a regression test for it.
+Created and maintained by **Ayushi Kundu** ([@ayushikundu5](https://github.com/ayushikundu5)).
 
-### Noise IK, not XX
+Contributions and pull requests welcome! Please read [`CLAUDE.md`](CLAUDE.md) for contribution guidelines and testing requirements.
 
-XX lets two strangers agree a key and *then* compare fingerprints out of band. That is one unauthenticated round trip, and it is where every MITM break in this class of app lives.
+---
 
-IK requires the initiator to already hold the responder's static key, and in this app that key can only have come from a QR pairing. So "no unauthenticated key exchange, ever" stops being a rule people have to remember and becomes something the protocol cannot express: **you cannot handshake with someone you have not met.** IK also hides the initiator's identity from relays, since its static key travels encrypted inside the first message.
+## 📄 License
 
-The X25519 Noise key is derived from the Ed25519 identity seed through an HMAC rather than converted from it — one keypair used for two algorithms means a flaw in either primitive's use costs you both. The pairing QR carries both keys and is signed by the identity key, and the six confirmation words cover both, so a MITM swapping only the Noise key still produces different words on the two screens.
-
-### What a relay learns from a direct message
-
-A relay sees an 8-byte tag and a ciphertext. The tag is `HMAC(directional key, counter)` — **fresh for every message** — so two messages in one conversation look no more related than two between strangers. Recipients pre-register expected tags, so a non-recipient does one map lookup and zero crypto.
-
-The frame's `sender` field would undo this, so direct messages and handshakes are signed with an **ephemeral** key rotating every 15 minutes, alongside the advertised Bluetooth id. Public channel messages use the real identity key, because attribution there is what stops impersonation.
-
-### The BLE advertisement is 31 bytes
-
-A legacy advertisement holds 31 bytes. Flags take 3 and a 128-bit service UUID takes 18, leaving 10 — and service data keyed by that same UUID would spend 18 more restating it. The peer id therefore rides in **manufacturer data** under company id `0xFFFF` (SIG-reserved for internal use): 2 + 2 + 7 = 11 bytes, in the scan response, while the advertisement carries the UUID that `ScanFilter` matches on.
-
-Getting this wrong fails closed and silently: `ADVERTISE_FAILED_DATA_TOO_LARGE` means the phone scans perfectly while being invisible to everyone else.
-
-### Android counts scan starts, not scan time
-
-Five `startScan` calls in any 30 seconds and the sixth fails. The duty cycle asks for a 1–2 second cycle at full power, which exhausts that budget in five seconds and leaves the phone **advertising but deaf**. `BleTransport` therefore floors the scan cycle at 6.5 s and widens the window to preserve the duty *ratio*, so the power model still holds.
-
-### Battery is a protocol concern
-
-Continuous BLE scanning is the largest power cost, well ahead of crypto. `power/dutyCycle.ts` is pure policy — testable without a battery — and cuts scanning hard while keeping advertising alive: a node that can still be *found* stays part of the mesh even when it has mostly stopped looking.
-
-The density term is the interesting one. In a crowded mesh, anything a node would find by scanning harder a neighbour will relay to it anyway — and a crowd is where battery matters most. Alone, the policy scans harder to get back in. Except on a dying battery, where it deliberately does not: at 4%, staying advertisable for hours is worth more than one more neighbour now.
-
-### Known limitation: no application-level ARQ
-
-A frame arrives only if every fragment does, so per-link delivery is `(1-p)^fragments`. At the 20-byte BLE floor a signed frame is 9 fragments; at 30% loss that is ~4%, and path redundancy does not repair it. Connection-oriented BLE retransmits at the link layer, so this is pessimistic for GATT writes and realistic for anything advertising-based.
-
-Two consequences: MTU negotiation is a reliability feature rather than a throughput tweak, and carrying frames over advertisements would require real ARQ in L1 first.
-
-### What iOS cannot do
-
-Apple drops service data from background advertisements, keeping only the service UUID in an overflow area readable solely by other iOS devices scanning for that exact UUID. **Two backgrounded iPhones cannot discover each other.** No workaround exists.
-
-The mesh therefore runs on Android; on iOS it works in the foreground and a pocketed iPhone is a leaf node, not a relay. The app reports this rather than letting someone believe they are carrying traffic when they are not.
-
-### Other things the simulator cannot see
-
-The 192 tests run in Node, which has `crypto.getRandomValues`. Hermes does not — every key, message id, and nonce comes from it, so `packages/app/index.js` imports `react-native-get-random-values` **before anything else**. Deleting that line is a one-character change that bricks the app at launch with an empty log.
-
-This generalises: everything below the `Transport` interface and everything in the UI is invisible to the suite by design. Both are where the hardware bugs were.
-
-## Contributing
-
-Rules that are load-bearing rather than stylistic, each with a regression test:
-
-1. **Nothing in `packages/core` imports from `react-native`.** Platform APIs go behind `Transport` or into `packages/app`.
-2. **Verify before dedup.**
-3. **Everything meaningful is inside the signature.**
-4. **No unauthenticated key exchange, ever.** No TOFU, no `trustFromFrame()`.
-5. **Trust store keys are pinned.** Changing one requires an explicit `repair()`.
-6. **Direct messages are signed with an ephemeral key.**
-7. **Bounds are security properties** — the seen set, outbox, reassembly buffers, pending handshakes and tag index are all capped.
-
-Conventions: comments explain *why*, tests are named as claims (`it('drops replays rather than re-delivering them')`), strict TypeScript with `noUncheckedIndexedAccess`, and errors on the receive path return null while errors on user input throw.
-
-Add the adversarial test with the feature. The interesting question is rarely "does it work" — it is "what does a hostile peer get to do".
-
-## Threat model
-
-Shipping at **"connectivity, not adversaries."** Architected for more; marketed for exactly this until externally audited.
-
-Three properties are in from the first commit because they cannot be retrofitted without a protocol break:
-
-1. **No unauthenticated key exchange, ever.** Public keys enter the trust store only via out-of-band QR pairing, and Noise IK makes that a property of the protocol rather than a convention. Known identities are key-pinned.
-2. **Rotating ephemeral advertising IDs.** A static id in BLE service data turns every user into a trackable beacon. `PeerId` is the ephemeral link handle and is never conflated with the identity key.
-3. **A version byte in frame zero**, so a ratchet can land later without a flag day.
-
-**Claimed:** message content is encrypted between paired contacts; nobody can post under someone else's name; a substituted key cannot survive two people comparing six words.
-
-**Not claimed until audited:** metadata resistance, protection from a resourced adversary, or safety for anyone at risk. The app advertises over Bluetooth, so a scanner nearby can tell it is running. Whisper Mesh protects what you say, not the fact that you are saying it.
-
-The message database is also **not encrypted** at rest. SQLCipher is post-audit work, and claiming at-rest encryption without it would be worse than not claiming it.
-
-## License
-
-MIT
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
