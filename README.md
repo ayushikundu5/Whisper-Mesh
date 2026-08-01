@@ -287,8 +287,6 @@ Whisper-Mesh/
 
 Created and maintained by **Ayushi Kundu** ([@ayushikundu5](https://github.com/ayushikundu5)).
 
-Contributions and pull requests welcome! Please read [`CLAUDE.md`](CLAUDE.md) for contribution guidelines and testing requirements.
-
 ---
 
 ## 📄 License
