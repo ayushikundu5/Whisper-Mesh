@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    // `moduleResolution: "node"` (node10) is deprecated and stops working in
+    // TypeScript 7. "bundler" is the right successor here rather than "node16":
+    // the `@noble/*` packages are pure ESM, and node16 resolution would reject
+    // importing them from a CommonJS file even though our toolchain handles it
+    // fine. "bundler" also matches how Metro actually consumes this package.
+    //
+    // Emit is irrelevant to this file — it only ever runs `tsc --noEmit`.
+    // ts-jest compiles to CommonJS for the test run via its own override in
+    // jest.config.js.
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "jest"]
+  },
+  "include": ["src/**/*.ts"]
+}

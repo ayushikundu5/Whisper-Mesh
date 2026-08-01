@@ -1,0 +1,8 @@
+{
+  "name": "whisper-ble",
+  "version": "0.0.1",
+  "private": true,
+  "description": "BLE peripheral role (advertiser + GATT server) for Whisper Mesh. react-native-ble-plx covers the central role; nothing in the RN ecosystem covers this one.",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

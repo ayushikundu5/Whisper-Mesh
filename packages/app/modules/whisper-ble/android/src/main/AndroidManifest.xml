@@ -1,0 +1,39 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <!--
+    Android 12+ split the Bluetooth permissions by intent. ADVERTISE and CONNECT
+    are what the peripheral role needs; SCAN belongs to the central half.
+
+    `neverForLocation` on SCAN is deliberate and load-bearing. Without it the OS
+    demands ACCESS_FINE_LOCATION, which is both a much harder permission to ask
+    a user for and a claim this app has no business making — it never wants a
+    position, only whether another phone is within a few metres.
+  -->
+  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+  <uses-permission
+      android:name="android.permission.BLUETOOTH_SCAN"
+      android:usesPermissionFlags="neverForLocation" />
+
+  <!-- Pre-12 devices still use the legacy permissions. -->
+  <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+  <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
+  <!--
+    Without a foreground service the OS tears down the GATT server and the
+    advertiser within minutes of the app being backgrounded, and the device
+    silently stops being part of the mesh.
+  -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
+  <application>
+    <service
+        android:name=".WhisperForegroundService"
+        android:exported="false"
+        android:foregroundServiceType="connectedDevice" />
+  </application>
+</manifest>

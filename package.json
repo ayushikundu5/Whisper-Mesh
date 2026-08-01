@@ -1,0 +1,18 @@
+{
+  "name": "whisper-mesh",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Offline BLE mesh messenger",
+  "//workspaces": "packages/app is deliberately NOT a workspace. It pulls the whole React Native toolchain, and the promise that `npm install && npm test` runs the protocol suite on any machine with no hardware is worth more than saving one install command. See packages/app/README.md.",
+  "workspaces": [
+    "packages/core"
+  ],
+  "scripts": {
+    "test": "npm test --workspace packages/core",
+    "typecheck": "npm run typecheck --workspace packages/core",
+    "typecheck:app": "npm run typecheck --prefix packages/app",
+    "app": "npm start --prefix packages/app",
+    "android": "npm run android --prefix packages/app"
+  },
+  "license": "MIT"
+}

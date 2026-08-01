@@ -1,0 +1,29 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'expo.modules.whisperble'
+version = '0.0.1'
+
+android {
+  namespace 'expo.modules.whisperble'
+
+  defaultConfig {
+    // BLUETOOTH_ADVERTISE / BLUETOOTH_CONNECT split landed in 31; below that the
+    // legacy BLUETOOTH permissions apply and are declared in the manifest.
+    minSdkVersion 26
+
+    // expo-module-gradle-plugin builds a publishable 'release' component for every
+    // local module, and AGP refuses to assemble one without a versionName. Omitting
+    // these fails the whole build at configuration time, before any Kotlin compiles,
+    // with an error that names this project but not the missing field. Keep in step
+    // with `version` above and the module's package.json.
+    versionCode 1
+    versionName '0.0.1'
+  }
+}
+
+dependencies {
+  implementation 'androidx.core:core-ktx:1.13.1'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+}

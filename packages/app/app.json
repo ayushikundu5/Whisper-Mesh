@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Whisper Mesh",
+    "slug": "whisper-mesh",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "whisper",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0b0e11",
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "org.whispermesh.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.BLUETOOTH_ADVERTISE",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#0b0e11"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "org.whispermesh.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Whisper Mesh uses Bluetooth to find nearby phones and pass messages between them. It never uses Bluetooth to determine your location.",
+        "NSCameraUsageDescription": "The camera is used only to scan a contact's pairing code. Pairing in person is the only way to add a contact.",
+        "UIBackgroundModes": ["bluetooth-central", "bluetooth-peripheral"]
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "The camera is used only to scan a contact's pairing code."
+        }
+      ],
+      "expo-secure-store",
+      "expo-sqlite"
+    ]
+  }
+}
